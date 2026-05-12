@@ -20,13 +20,35 @@ from saved_filters import (
 )
 
 
+def export_button(df, label, filename_prefix, key=None):
+    """Render a CSV download button for a dataframe."""
+    if df is None or len(df) == 0:
+        return
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label=label,
+        data=csv,
+        file_name=f"{filename_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv",
+        key=key,
+    )
+
+
 def show_welcome_screen():
     """Display welcome screen when no file is uploaded"""
     st.info("👆 Please upload an audit log CSV file to get started")
-    
+
+    with st.expander("🆘 How do I get a CSV from Azure DevOps?", expanded=False):
+        st.markdown("""
+        1. In Azure DevOps, go to **Organization Settings → Auditing**.
+        2. Set the date range you want to investigate.
+        3. Click **Download** and choose **CSV**.
+        4. Upload that file above.
+        """)
+
     st.markdown("### 📋 Features")
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
         st.markdown("""
         **🔍 Search & Filter**
@@ -37,7 +59,7 @@ def show_welcome_screen():
         - Export filtered results
         - Pagination for large datasets
         """)
-    
+
     with col2:
         st.markdown("""
         **📊 Dashboard**
@@ -47,7 +69,7 @@ def show_welcome_screen():
         - IP address tracking
         - Compare time periods
         """)
-    
+
     with col3:
         st.markdown("""
         **⚠️ Risk Detection**
@@ -57,6 +79,106 @@ def show_welcome_screen():
         - Quick incident investigation
         - After-hours activity alerts
         """)
+
+    st.markdown("---")
+    st.caption("💡 After you upload a file, open the **❓ Help** tab for a 1-minute TL;DR on every tab and filter.")
+
+
+def show_help_tab():
+    """Built-in help / TL;DR guide for the whole app."""
+    st.subheader("❓ Help & Quick Reference")
+
+    st.markdown("""
+    **TL;DR** — Upload your ADO audit log CSV, then use the tabs across the top to investigate.
+    Most investigations start on **🔍 Search & Filter**: pick a user or date range on the left,
+    click a quick-filter preset, or type in the search box. Every view has a 📥 Export button
+    so you can save the slice you found for a report or ticket.
+    """)
+
+    st.markdown("### 🚀 5-step workflow")
+    st.markdown("""
+    1. **Upload** the CSV exported from *Organization Settings → Auditing* in Azure DevOps.
+    2. **Scan the 🚨 Alerts tab first** — it surfaces bulk permission changes, deletions,
+       after-hours activity, and shared-IP anomalies automatically.
+    3. **Narrow down** on the 🔍 Search & Filter tab: pick a date range, user, action type,
+       or click a ⚡ quick-filter preset.
+    4. **Drill in** on the 👥 Users, 🔐 Permissions, or 📋 Timeline tabs to see the full story
+       for a specific person, permission change, or day.
+    5. **Export** whatever slice answers the question — every table has a CSV export button.
+    """)
+
+    st.markdown("### 🗂️ What each tab is for")
+    tab_help = [
+        ("🔍 Search & Filter", "Your main workspace. Combine filters (date, user, action, event, risk) plus free-text search. Save filter combos for reuse."),
+        ("🔐 Permissions", "Who changed what permissions for whom. Parses the `Data` JSON to show specific permission flips (Allow/Deny) and the subject that was affected."),
+        ("👥 Users", "Pick one user and see their full timeline. Includes a per-user Risk Score table (% of that user's actions that were risky)."),
+        ("📊 Dashboard", "Top-level metrics + charts: activity over time, action distribution, event categories, most active users."),
+        ("📈 Analytics", "Deeper cuts: hourly activity heatmap, IP address distribution, users-per-IP (useful for spotting shared accounts)."),
+        ("⚠️ Risk Analysis", "All rows flagged as risky (by keyword match on Action / Event / Description). Includes charts of the riskiest users and action types."),
+        ("📋 Timeline", "Day-by-day total and risky action counts. Good for spotting spike days worth investigating."),
+        ("🚨 Alerts", "Auto-detected patterns: bulk permission changes by one user, mass deletions, after-hours activity, multiple users from the same IP. **Start here after upload.**"),
+        ("🔄 Compare Periods", "Pick two date ranges and compare. Great for 'is this week worse than last week?'"),
+        ("📚 Reference", "Glossary of every column in the audit CSV — what `ActorCUID`, `ScopeType`, `Data` etc. mean."),
+        ("❓ Help", "This page."),
+    ]
+    for name, desc in tab_help:
+        st.markdown(f"- **{name}** — {desc}")
+
+    st.markdown("### ⚡ Quick-filter presets (on Search & Filter tab)")
+    st.markdown("""
+    | Preset | What it shows |
+    | --- | --- |
+    | **All Deletions** | Any row whose Description mentions delete/remove |
+    | **Permission Changes** | `ModifyPermission` and related actions |
+    | **Risky Actions** | Rows auto-tagged as risky |
+    | **Access Changes** | Grant / revoke / access modifications |
+    | **PATs / Tokens** | Personal access tokens, SSH keys, OAuth |
+    | **Service Connections** | Service endpoint / library connection changes |
+    | **Branch Policy** | Branch policy / protection / repo policy changes |
+    | **Org / Project Admin** | Organization-level and project create/delete/rename |
+    | **Group Membership** | Group and team membership changes |
+    | **Today** / **Last 7 Days** | Time-window shortcuts |
+    """)
+
+    st.markdown("### 🎛️ Sidebar filters")
+    st.markdown("""
+    All sidebar filters **combine with AND** (more restrictive as you add more).
+
+    - **📅 Date Range** — pick start/end dates. Defaults to the full span of the file.
+    - **👤 User** — multi-select; leave `All` to skip.
+    - **⚡ Action Type** — the specific `ActionId` (e.g. `Project.Delete`).
+    - **📝 Event Type** — broader category (e.g. `Project`, `Security`, `Repository`).
+    - **⚠️ Risk Level** — *All* / *Risky Only* / *Normal Only*. Risky = keyword match on delete/remove/revoke/modify/grant.
+    - **🔎 Search** — substring match, case-insensitive. Toggle **All columns** to also search the `Data` JSON blob, IDs, and UPN fields (slower but catches everything).
+    - **🔄 Reset All Filters** — clears the filter state.
+    """)
+
+    st.markdown("### 💾 Saving filter combos")
+    st.markdown("""
+    Once you've dialed in a useful filter combination, open **💾 Save Current Filters**
+    under the search box, name it (e.g. *"Last-week risky deletions"*), and it will appear
+    under **📂 My Saved Filters** next time you open the app. Saved filters live in
+    `saved_filters.json` next to the app — delete that file to wipe them all.
+    """)
+
+    st.markdown("### 🚨 When to escalate")
+    st.markdown("""
+    Patterns that usually warrant a closer look:
+
+    - One user making **>5 permission changes** in a short window → *Bulk Permission Changes* alert.
+    - **Deletions** of projects, repos, or service connections.
+    - Activity between **10pm–5am** local time when no one should be working.
+    - **>5 different users from the same IP** (shared account or compromised workstation).
+    - **PAT / token creation** immediately followed by unusual API activity.
+    """)
+
+    st.markdown("### 💡 Tips")
+    st.markdown("""
+    - **Big files slow?** Results over 1,000 rows auto-paginate. Narrow with filters before searching all columns.
+    - **Dates not parsing?** The app shows "Parsed X of Y dates" after upload. If Y > X, some rows had unexpected date formats — they still load, they just won't appear in date-filtered views.
+    - **Skipped rows warning?** The CSV had malformed rows (wrong column count). They're logged in the warning; the rest still loads.
+    - **Export anything, anywhere** — every data table in the app has a CSV export button under or near it.
+    """)
 
 
 def apply_quick_filter(df, filter_name):
@@ -150,14 +272,17 @@ def show_search_and_filter(df):
     # Quick Filters Section
     st.markdown("### ⚡ Quick Filters")
     st.caption("Click a preset to quickly filter the data")
-    
-    quick_filter_cols = st.columns(len(QUICK_FILTERS))
+
     selected_quick_filter = None
-    
-    for idx, (filter_name, filter_config) in enumerate(QUICK_FILTERS.items()):
-        with quick_filter_cols[idx]:
-            if st.button(filter_name, help=filter_config['description'], use_container_width=True):
-                selected_quick_filter = filter_name
+    per_row = 4
+    filter_items = list(QUICK_FILTERS.items())
+    for row_start in range(0, len(filter_items), per_row):
+        row_items = filter_items[row_start:row_start + per_row]
+        row_cols = st.columns(per_row)
+        for col_idx, (filter_name, filter_config) in enumerate(row_items):
+            with row_cols[col_idx]:
+                if st.button(filter_name, help=filter_config['description'], use_container_width=True, key=f"qf_{filter_name}"):
+                    selected_quick_filter = filter_name
     
     st.markdown("---")
     
@@ -288,26 +413,35 @@ def show_search_and_filter(df):
     elif risk_filter == 'Normal Only':
         filtered_df = filtered_df[filtered_df['IsRisky'] == False]
     
-    # Search box - optimized to search only relevant columns
-    search_query = st.text_input(
-        "🔎 Search across key fields",
-        placeholder="Enter keywords to search...",
-        help="Searches in: " + ", ".join(SEARCHABLE_COLUMNS),
-        key="search_input"
-    )
-    
+    # Search box
+    search_col1, search_col2 = st.columns([4, 1])
+    with search_col1:
+        search_query = st.text_input(
+            "🔎 Search",
+            placeholder="Enter keywords to search...",
+            help="Searches in all visible fields by default. Toggle 'All columns' to include JSON Data, IDs, etc.",
+            key="search_input"
+        )
+    with search_col2:
+        search_all_cols = st.checkbox(
+            "All columns",
+            value=False,
+            help="Search across every column, including Data (JSON), IDs, UPN, etc."
+        )
+
     if search_query:
-        # Only search in columns that exist and are in SEARCHABLE_COLUMNS
-        search_cols = [col for col in SEARCHABLE_COLUMNS if col in filtered_df.columns]
+        if search_all_cols:
+            search_cols = list(filtered_df.columns)
+        else:
+            search_cols = [c for c in SEARCHABLE_COLUMNS if c in filtered_df.columns]
+
         if search_cols:
-            # Use vectorized string operations for speed
             search_lower = search_query.lower()
-            mask = pd.Series([False] * len(filtered_df), index=filtered_df.index)
-            
+            mask = pd.Series(False, index=filtered_df.index)
             for col in search_cols:
-                # Convert to string and search (faster than apply)
-                mask |= filtered_df[col].astype(str).str.lower().str.contains(search_lower, na=False, regex=False)
-            
+                mask |= filtered_df[col].astype(str).str.lower().str.contains(
+                    search_lower, na=False, regex=False
+                )
             filtered_df = filtered_df[mask]
     
     # Display results count
@@ -447,31 +581,28 @@ def show_permission_changes_report(df):
         return
     
     st.write(f"**Found {len(perm_df)} permission change entries**")
-    
-    # Create summary table
-    summary_data = []
-    for _, row in perm_df.iterrows():
-        data_str = row.get('Data', '')
-        parsed_data = parse_json_field(data_str) if data_str else None
-        
-        perms_changed = ""
-        if parsed_data and 'EventSummary' in parsed_data:
-            perms = parsed_data['EventSummary']
-            if isinstance(perms, list):
-                perms_changed = "; ".join([
-                    f"{p.get('PermissionNames', '')} ({p.get('Change', '')})" 
-                    for p in perms if isinstance(p, dict)
-                ])
-        
-        summary_data.append({
-            'User': row.get('Actor Name', 'N/A'),
-            'When': row.get('Date', 'N/A'),
-            'Permissions Changed': perms_changed or row.get('Description', ''),
-            'Scope': row.get('ScopeDisplayName', 'N/A'),
-            'IP': row.get('IP Address', 'N/A')
-        })
-    
-    summary_df = pd.DataFrame(summary_data)
+
+    def _summarize_perm(data_str, fallback):
+        parsed = parse_json_field(data_str) if data_str else None
+        if parsed and isinstance(parsed.get('EventSummary'), list):
+            parts = [
+                f"{p.get('PermissionNames', '')} ({p.get('Change', '')})"
+                for p in parsed['EventSummary'] if isinstance(p, dict)
+            ]
+            if parts:
+                return "; ".join(parts)
+        return fallback
+
+    data_col = perm_df['Data'] if 'Data' in perm_df.columns else pd.Series([''] * len(perm_df), index=perm_df.index)
+    desc_col = perm_df['Description'] if 'Description' in perm_df.columns else pd.Series([''] * len(perm_df), index=perm_df.index)
+
+    summary_df = pd.DataFrame({
+        'User': perm_df['Actor Name'].astype(str) if 'Actor Name' in perm_df.columns else 'N/A',
+        'When': perm_df['Date'].astype(str) if 'Date' in perm_df.columns else 'N/A',
+        'Permissions Changed': [_summarize_perm(d, f) for d, f in zip(data_col, desc_col)],
+        'Scope': perm_df['ScopeDisplayName'].astype(str) if 'ScopeDisplayName' in perm_df.columns else 'N/A',
+        'IP': perm_df['IP Address'].astype(str) if 'IP Address' in perm_df.columns else 'N/A',
+    })
     st.dataframe(summary_df, use_container_width=True)
     
     # Export button
@@ -498,27 +629,23 @@ def show_who_did_what_matrix(df):
         st.info("No permission change data available")
         return
     
-    # Extract who changed permissions for whom
-    matrix_data = []
-    for _, row in perm_df.iterrows():
-        data_str = row.get('Data', '')
-        parsed_data = parse_json_field(data_str) if data_str else None
-        
-        actor = row.get('Actor Name', 'Unknown')
-        subject = 'Unknown'
-        if parsed_data and 'SubjectDisplayName' in parsed_data:
-            subject = parsed_data['SubjectDisplayName']
-        
-        matrix_data.append({
-            'Modified By': actor,
-            'For User': subject,
-            'When': row.get('Date', 'N/A'),
-            'What': row.get('Description', 'N/A'),
-            'Scope': row.get('ScopeDisplayName', 'N/A')
-        })
-    
-    if matrix_data:
-        matrix_df = pd.DataFrame(matrix_data)
+    def _extract_subject(data_str):
+        parsed = parse_json_field(data_str) if data_str else None
+        if parsed and isinstance(parsed, dict):
+            return parsed.get('SubjectDisplayName') or 'Unknown'
+        return 'Unknown'
+
+    data_col = perm_df['Data'] if 'Data' in perm_df.columns else pd.Series([''] * len(perm_df), index=perm_df.index)
+
+    matrix_df = pd.DataFrame({
+        'Modified By': perm_df['Actor Name'].astype(str) if 'Actor Name' in perm_df.columns else 'Unknown',
+        'For User': [_extract_subject(d) for d in data_col],
+        'When': perm_df['Date'].astype(str) if 'Date' in perm_df.columns else 'N/A',
+        'What': perm_df['Description'].astype(str) if 'Description' in perm_df.columns else 'N/A',
+        'Scope': perm_df['ScopeDisplayName'].astype(str) if 'ScopeDisplayName' in perm_df.columns else 'N/A',
+    })
+
+    if not matrix_df.empty:
         st.dataframe(matrix_df, use_container_width=True)
     else:
         st.info("No permission change details could be extracted")
@@ -555,9 +682,16 @@ def show_action_history_by_scope(df):
         
         # Action log
         st.write("**Recent Actions:**")
-        display_cols = [col for col in ['Date', 'Actor Name', 'Event', 'Action', 'Description'] 
+        display_cols = [col for col in ['Date', 'Actor Name', 'Event', 'Action', 'Description']
                        if col in scope_df.columns]
         st.dataframe(scope_df[display_cols].head(20), use_container_width=True)
+
+        export_button(
+            scope_df,
+            label=f"📥 Export all {len(scope_df)} actions for this scope",
+            filename_prefix="scope_actions",
+            key="export_scope",
+        )
 
 
 def show_users_tab(df):
@@ -585,10 +719,17 @@ def show_user_activity_timeline(df):
         user_df = df[df['Actor Name'] == selected_user]
         if 'DateTime' in user_df.columns and not user_df['DateTime'].isna().all():
             user_df = user_df.sort_values('DateTime', ascending=False)
-        
+
         st.write(f"**{selected_user}** - {len(user_df)} actions")
-        
-        # Display as timeline
+
+        export_button(
+            user_df,
+            label=f"📥 Export all {len(user_df)} actions for {selected_user}",
+            filename_prefix=f"user_{str(selected_user).replace(' ', '_')}_activity",
+            key=f"export_user_{selected_user}",
+        )
+
+        # Display as timeline (first 50)
         for _, row in user_df.head(50).iterrows():
             col1, col2, col3 = st.columns([2, 1, 3])
             
@@ -607,14 +748,15 @@ def show_user_activity_timeline(df):
 def show_risk_scores(df):
     """Display user risk scores based on activity"""
     st.subheader("⚠️ User Risk Scores")
-    
+
     risk_df = calculate_user_risk_scores(df)
-    
+
     if risk_df.empty:
         st.info("Unable to calculate risk scores")
         return
-    
+
     st.dataframe(risk_df, use_container_width=True)
+    export_button(risk_df, "📥 Export Risk Scores", "user_risk_scores", key="export_risk_scores")
 
 
 def show_dashboard(df):
@@ -697,8 +839,9 @@ def show_analytics(df):
         user_activity.columns = ['User', 'Total Actions', 'Risky Actions', 'Most Common Action']
         user_activity['Risk %'] = (user_activity['Risky Actions'] / user_activity['Total Actions'] * 100).round(1)
         user_activity = user_activity.sort_values('Total Actions', ascending=False)
-        
+
         st.dataframe(user_activity.head(20), use_container_width=True, height=400)
+        export_button(user_activity, "📥 Export Full User Activity", "user_activity", key="export_user_activity")
     else:
         st.info("User activity information not available")
     
@@ -837,6 +980,7 @@ def show_timeline_tab(df):
     
     # Table
     st.dataframe(date_summary, use_container_width=True)
+    export_button(date_summary, "📥 Export Daily Summary", "timeline_daily", key="export_timeline")
 
 
 def show_alerts_tab(df):
@@ -976,6 +1120,14 @@ def show_comparison_tab(df):
             st.metric("Total Actions", f"{change_actions:+d}")
             st.metric("Unique Users", f"{change_users:+d}")
             st.metric("Risky Actions", f"{change_risky:+d}")
+
+        st.markdown("---")
+        st.markdown("### 📥 Export Period Data")
+        exp_col1, exp_col2 = st.columns(2)
+        with exp_col1:
+            export_button(df1, f"Export {period1_label} ({len(df1)} rows)", "compare_period1", key="export_period1")
+        with exp_col2:
+            export_button(df2, f"Export {period2_label} ({len(df2)} rows)", "compare_period2", key="export_period2")
 
 
 def show_column_reference(df):

@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 echo ========================================
 echo ADO Audit Log Analyzer - Installation
 echo ========================================

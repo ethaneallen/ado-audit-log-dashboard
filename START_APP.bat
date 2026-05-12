@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 REM ADO Audit Log Analyzer - Quick Launch Script
 echo Starting ADO Audit Log Analyzer...
 echo.

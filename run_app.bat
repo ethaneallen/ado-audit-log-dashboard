@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 echo ========================================
 echo Starting ADO Audit Log Analyzer...
 echo ========================================
@@ -40,6 +41,6 @@ echo The app will open in your default browser.
 echo Press Ctrl+C in this window to stop the app.
 echo.
 
-"%PYTHON_PATH%" -m streamlit run audit_log_analyzer.py
+"%PYTHON_PATH%" -m streamlit run app.py
 
 pause

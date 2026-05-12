@@ -44,6 +44,11 @@ CACHE_TIMEOUT_SECONDS = 3600  # 1 hour cache
 SHOW_PERFORMANCE_METRICS = True  # Show memory usage and timing
 
 # Quick filter presets
+# filter_type meanings:
+#   'description_contains' - match values in the Description column (case-insensitive)
+#   'action_contains'      - match values in the Action or Event columns
+#   'risky_only'           - show only rows where IsRisky is True
+#   'date_range'           - symbolic values: 'today', 'last_7_days'
 QUICK_FILTERS = {
     'All Deletions': {
         'description': 'Show all delete/remove operations',
@@ -64,6 +69,31 @@ QUICK_FILTERS = {
         'description': 'Show access modifications',
         'filter_type': 'description_contains',
         'values': ['access', 'grant', 'revoke']
+    },
+    'PATs / Tokens': {
+        'description': 'Personal access token and SSH key activity',
+        'filter_type': 'action_contains',
+        'values': ['Token.', 'Pat.', 'SshKey.', 'OAuth']
+    },
+    'Service Connections': {
+        'description': 'Service connection / endpoint changes',
+        'filter_type': 'action_contains',
+        'values': ['ServiceEndpoint', 'Library.ServiceConnection']
+    },
+    'Branch Policy': {
+        'description': 'Branch policy / protection changes',
+        'filter_type': 'action_contains',
+        'values': ['Policy.', 'BranchPolicy', 'Branch.', 'Repository.']
+    },
+    'Org / Project Admin': {
+        'description': 'Organization or project-level administration',
+        'filter_type': 'action_contains',
+        'values': ['Organization.', 'Project.Create', 'Project.Delete', 'Project.Rename']
+    },
+    'Group Membership': {
+        'description': 'Group / team membership changes',
+        'filter_type': 'action_contains',
+        'values': ['Group.', 'GroupMembership', 'Member.']
     },
     'Today': {
         'description': 'Show today\'s activity',

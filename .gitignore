@@ -44,3 +44,11 @@ Thumbs.db
 # Exports
 exports/
 reports/
+
+# Sample/support bundles (may contain sensitive diagnostics)
+MSSupport-*/
+MSSupport-*.zip
+*.zip
+
+# Saved filters (local per-user state)
+saved_filters.json

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import io
 
 # Import custom modules
-from data_loader_simple import load_data, safe_column_access, safe_unique_values
+from data_loader import load_data, safe_column_access, safe_unique_values
 from risk_analyzer import (
     analyze_risks, parse_json_field, extract_permission_changes,
     calculate_user_risk_scores, detect_critical_alerts, get_risk_badge
@@ -29,7 +29,8 @@ from config import (
 from ui_components import (
     show_welcome_screen, show_search_and_filter, show_permissions_tab,
     show_users_tab, show_dashboard, show_analytics, show_risky_actions,
-    show_timeline_tab, show_alerts_tab, show_comparison_tab, show_column_reference
+    show_timeline_tab, show_alerts_tab, show_comparison_tab, show_column_reference,
+    show_help_tab,
 )
 
 # Page configuration
@@ -116,38 +117,42 @@ def main():
                 "📋 Timeline",
                 "🚨 Alerts",
                 "🔄 Compare Periods",
-                "📚 Reference"
+                "📚 Reference",
+                "❓ Help",
             ])
-            
+
             with tabs[0]:
                 show_search_and_filter(df)
-            
+
             with tabs[1]:
                 show_permissions_tab(df)
-            
+
             with tabs[2]:
                 show_users_tab(df)
-            
+
             with tabs[3]:
                 show_dashboard(df)
-            
+
             with tabs[4]:
                 show_analytics(df)
-            
+
             with tabs[5]:
                 show_risky_actions(df)
-            
+
             with tabs[6]:
                 show_timeline_tab(df)
-            
+
             with tabs[7]:
                 show_alerts_tab(df)
-            
+
             with tabs[8]:
                 show_comparison_tab(df)
-            
+
             with tabs[9]:
                 show_column_reference(df)
+
+            with tabs[10]:
+                show_help_tab()
     else:
         show_welcome_screen()
 
